@@ -58,6 +58,7 @@
         .recap-item { font-size: 0.95rem; padding: 0.4rem 0; }
         .recap-preview { height: 100px; display: flex; align-items: center; justify-content: center; }
     </style>
+    <script src="{{ asset('js/scanner-client.js') }}"></script>
 </head>
 <body>
     <div class="kiosk-page">
@@ -249,14 +250,13 @@
                                         <p class="mb-3 text-center text-muted">امسح صفحة ختم الوصول من جواز السفر</p>
                                         <div class="row justify-content-center">
                                             <div class="col-md-6">
-                                                <div class="scanner-area" id="arrivalScanArea">
-                                                    <input type="file" name="arrival_file" id="arrivalFile" class="file-input-hidden" accept="image/*" onchange="handleFileSelect(this, 'arrival')">
-                                                    <i data-lucide="scan" style="width: 48px; height: 48px;" class="text-muted"></i>
-                                                    <p class="mb-1 fw-semibold">SecureScan X50</p>
-                                                    <p class="mb-0 text-muted small">اضغط لاختيار ملف أو ضع الختم على الماسح</p>
-                                                </div>
-                                                <div id="arrivalPreview" class="mt-2 text-center" style="display: none;">
-                                                    <img id="arrivalImage" class="rounded img-fluid" style="max-height: 120px;">
+                                                <div class="scanner-area" id="arrivalScanArea" onclick="startArrivalScan()">
+                                                    <input type="hidden" name="arrival_image_base64" id="arrival_image_base64">
+                                                    <div id="arrival-preview">
+                                                        <i data-lucide="scan" style="width: 48px; height: 48px;" class="text-muted"></i>
+                                                        <p class="mb-1 fw-semibold">SecureScan X50</p>
+                                                        <p class="mb-0 text-muted small">اضغط لمسح ختم الوصول</p>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -272,14 +272,13 @@
                                         <p class="mb-3 text-center text-muted">امسح بطاقة صعود الطائرة</p>
                                         <div class="row justify-content-center">
                                             <div class="col-md-6">
-                                                <div class="scanner-area" id="boardingScanArea">
-                                                    <input type="file" name="boarding_file" id="boardingFile" class="file-input-hidden" accept="image/*" onchange="handleFileSelect(this, 'boarding')">
-                                                    <i data-lucide="scan" style="width: 48px; height: 48px;" class="text-muted"></i>
-                                                    <p class="mb-1 fw-semibold">SecureScan X50</p>
-                                                    <p class="mb-0 text-muted small">اضغط لاختيار ملف أو ضع البطاقة على الماسح</p>
-                                                </div>
-                                                <div id="boardingPreview" class="mt-2 text-center" style="display: none;">
-                                                    <img id="boardingImage" class="rounded img-fluid" style="max-height: 120px;">
+                                                <div class="scanner-area" id="boardingScanArea" onclick="startBoardingScan()">
+                                                    <input type="hidden" name="boarding_image_base64" id="boarding_image_base64">
+                                                    <div id="boarding-preview">
+                                                        <i data-lucide="scan" style="width: 48px; height: 48px;" class="text-muted"></i>
+                                                        <p class="mb-1 fw-semibold">SecureScan X50</p>
+                                                        <p class="mb-0 text-muted small">اضغط لمسح بطاقة الصعود</p>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -449,19 +448,19 @@
                     }
                     break;
                 case 3:
-                    if (!document.getElementById('passportFile').files.length) {
+                    if (!document.getElementById('passport_image_base64').value) {
                         isValid = false;
                         errorMsg = 'يرجى مسح جواز السفر';
                     }
                     break;
                 case 4:
-                    if (!document.getElementById('arrivalFile').files.length) {
+                    if (!document.getElementById('arrival_image_base64').value) {
                         isValid = false;
                         errorMsg = 'يرجى مسح ختم الوصول';
                     }
                     break;
                 case 5:
-                    if (!document.getElementById('boardingFile').files.length) {
+                    if (!document.getElementById('boarding_image_base64').value) {
                         isValid = false;
                         errorMsg = 'يرجى مسح بطاقة الصعود';
                     }
@@ -472,38 +471,6 @@
                 nextStep();
             } else {
                 alert(errorMsg);
-            }
-        }
-
-        // File select handler for scanner placeholders
-        function handleFileSelect(input, type) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const area = document.getElementById(`${type}ScanArea`);
-                    area.classList.add('has-data');
-
-                    const preview = document.getElementById(`${type}Preview`);
-                    const image = document.getElementById(`${type}Image`);
-                    if (preview && image) {
-                        image.src = e.target.result;
-                        preview.style.display = 'block';
-                    }
-
-                    // Enable passport form fields when passport is scanned
-                    if (type === 'passport') {
-                        document.getElementById('firstName').disabled = false;
-                        document.getElementById('lastName').disabled = false;
-                        document.getElementById('passportNo').disabled = false;
-                        document.getElementById('nationality').disabled = false;
-                        // Simulate auto-fill (placeholder for OCR)
-                        document.getElementById('firstName').value = 'محمد';
-                        document.getElementById('lastName').value = 'أحمد';
-                        document.getElementById('passportNo').value = 'A12345678';
-                        document.getElementById('nationality').value = 'مصري';
-                    }
-                };
-                reader.readAsDataURL(input.files[0]);
             }
         }
 
@@ -552,21 +519,6 @@
             startCamera();
         }
 
-        // Scanner placeholder function
-        function scanDocument(type) {
-            // Placeholder - will be implemented with SecureScan X50 SDK
-            alert(`جاري المسح باستخدام SecureScan X50...\nنوع المستند: ${type}`);
-
-            // Simulate scan complete
-            const area = document.getElementById(`${type}ScanArea`);
-            area.classList.add('has-data');
-            area.innerHTML = `
-                <i data-lucide="check-circle" style="width: 48px; height: 48px;" class="mb-2 text-success"></i>
-                <p class="mb-0 text-success fw-semibold">تم المسح بنجاح</p>
-            `;
-            lucide.createIcons();
-        }
-
         function updateRecap() {
             document.getElementById('recapSerial').textContent = document.getElementById('serialNumber').value || '-';
             document.getElementById('recapName').textContent =
@@ -581,18 +533,22 @@
                 document.getElementById('recapPhoto').innerHTML = `<img src="${photoData}" style="max-height:60px;border-radius:4px;">`;
             }
 
-            // Show scanned images in recap
-            const passportImg = document.getElementById('passportImage');
-            if (passportImg && passportImg.src) {
-                document.getElementById('recapPassportImg').innerHTML = `<img src="${passportImg.src}" style="max-height:60px;border-radius:4px;">`;
+            // Show passport image in recap (from base64)
+            const passportBase64 = document.getElementById('passport_image_base64').value;
+            if (passportBase64) {
+                document.getElementById('recapPassportImg').innerHTML = `<img src="data:image/jpeg;base64,${passportBase64}" style="max-height:60px;border-radius:4px;">`;
             }
-            const arrivalImg = document.getElementById('arrivalImage');
-            if (arrivalImg && arrivalImg.src) {
-                document.getElementById('recapArrival').innerHTML = `<img src="${arrivalImg.src}" style="max-height:60px;border-radius:4px;">`;
+
+            // Show arrival stamp in recap (from base64)
+            const arrivalBase64 = document.getElementById('arrival_image_base64').value;
+            if (arrivalBase64) {
+                document.getElementById('recapArrival').innerHTML = `<img src="data:image/jpeg;base64,${arrivalBase64}" style="max-height:60px;border-radius:4px;">`;
             }
-            const boardingImg = document.getElementById('boardingImage');
-            if (boardingImg && boardingImg.src) {
-                document.getElementById('recapBoarding').innerHTML = `<img src="${boardingImg.src}" style="max-height:60px;border-radius:4px;">`;
+
+            // Show boarding pass in recap (from base64)
+            const boardingBase64 = document.getElementById('boarding_image_base64').value;
+            if (boardingBase64) {
+                document.getElementById('recapBoarding').innerHTML = `<img src="data:image/jpeg;base64,${boardingBase64}" style="max-height:60px;border-radius:4px;">`;
             }
         }
 
@@ -667,21 +623,43 @@
         }
 
         function handlePassportScanResult(data) {
+            console.log('[DEBUG] handlePassportScanResult called with:', data);
+            console.log('[DEBUG] firstName:', data.firstName);
+            console.log('[DEBUG] lastName:', data.lastName);
+            console.log('[DEBUG] passportNumber:', data.passportNumber);
+            console.log('[DEBUG] nationality:', data.nationality);
+            console.log('[DEBUG] imageBase64 length:', data.imageBase64 ? data.imageBase64.length : 0);
+
             // Show scanned image
-            document.getElementById('scan-preview').innerHTML = `
-                <img src="data:image/jpeg;base64,${data.imageBase64}" class="img-fluid rounded" style="max-height:120px;">
-                <p class="mb-0 mt-2 text-success small"><i data-lucide="check-circle" style="width:14px;height:14px;"></i> تم المسح بنجاح</p>
-            `;
+            if (data.imageBase64) {
+                document.getElementById('scan-preview').innerHTML = `
+                    <img src="data:image/jpeg;base64,${data.imageBase64}" class="img-fluid rounded" style="max-height:120px;">
+                    <p class="mb-0 mt-2 text-success small"><i data-lucide="check-circle" style="width:14px;height:14px;"></i> تم المسح بنجاح</p>
+                `;
+            } else {
+                document.getElementById('scan-preview').innerHTML = `
+                    <div class="text-warning">
+                        <i data-lucide="alert-triangle" style="width:48px;height:48px;"></i>
+                        <p class="mb-0">تم المسح ولكن لا توجد صورة</p>
+                    </div>
+                `;
+            }
             lucide.createIcons();
 
             // Store base64 image
-            document.getElementById('passport_image_base64').value = data.imageBase64;
+            document.getElementById('passport_image_base64').value = data.imageBase64 || '';
 
             // Fill form fields
             document.getElementById('firstName').value = data.firstName || '';
             document.getElementById('lastName').value = data.lastName || '';
             document.getElementById('passportNo').value = data.passportNumber || '';
             document.getElementById('nationality').value = data.nationality || '';
+            
+            console.log('[DEBUG] Form fields filled:');
+            console.log('[DEBUG] - firstName field:', document.getElementById('firstName').value);
+            console.log('[DEBUG] - lastName field:', document.getElementById('lastName').value);
+            console.log('[DEBUG] - passportNo field:', document.getElementById('passportNo').value);
+            console.log('[DEBUG] - nationality field:', document.getElementById('nationality').value);
 
             // Enable form fields
             document.querySelectorAll('#passport-form input').forEach(input => {
@@ -695,14 +673,127 @@
             document.getElementById('scan-modal-status').innerHTML = '<span class="text-success">✓ تم قراءة بيانات جواز السفر</span>';
         }
 
+        // Arrival Stamp Scanning
+        function startArrivalScan() {
+            if (!scannerClient || !scannerClient.isConnected) {
+                alert('الماسح غير متصل. تأكد من تشغيل برنامج SecureScan Agent.');
+                return;
+            }
+            
+            // Show scanning state
+            document.getElementById('arrival-preview').innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border text-primary mb-2" role="status"></div>
+                    <p class="mb-0">جاري مسح ختم الوصول...</p>
+                </div>
+            `;
+            
+            // Use a custom handler for arrival scan
+            const originalHandler = scannerClient.onScanResult;
+            scannerClient.onScanResult = (data) => {
+                handleArrivalScanResult(data);
+                scannerClient.onScanResult = originalHandler;
+            };
+            
+            scannerClient.scan();
+        }
+
+        function handleArrivalScanResult(data) {
+            document.getElementById('arrival-preview').innerHTML = `
+                <img src="data:image/jpeg;base64,${data.imageBase64}" class="img-fluid rounded" style="max-height:120px;">
+                <p class="mb-0 mt-2 text-success small"><i data-lucide="check-circle" style="width:14px;height:14px;"></i> تم المسح بنجاح</p>
+            `;
+            lucide.createIcons();
+            
+            document.getElementById('arrival_image_base64').value = data.imageBase64;
+            document.getElementById('arrivalScanArea').classList.add('has-data');
+        }
+
+        // Boarding Pass Scanning
+        function startBoardingScan() {
+            if (!scannerClient || !scannerClient.isConnected) {
+                alert('الماسح غير متصل. تأكد من تشغيل برنامج SecureScan Agent.');
+                return;
+            }
+            
+            // Show scanning state
+            document.getElementById('boarding-preview').innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border text-primary mb-2" role="status"></div>
+                    <p class="mb-0">جاري مسح بطاقة الصعود...</p>
+                </div>
+            `;
+            
+            // Use a custom handler for boarding scan
+            const originalHandler = scannerClient.onScanResult;
+            scannerClient.onScanResult = (data) => {
+                handleBoardingScanResult(data);
+                scannerClient.onScanResult = originalHandler;
+            };
+            
+            scannerClient.scan();
+        }
+
+        function handleBoardingScanResult(data) {
+            document.getElementById('boarding-preview').innerHTML = `
+                <img src="data:image/jpeg;base64,${data.imageBase64}" class="img-fluid rounded" style="max-height:120px;">
+                <p class="mb-0 mt-2 text-success small"><i data-lucide="check-circle" style="width:14px;height:14px;"></i> تم المسح بنجاح</p>
+            `;
+            lucide.createIcons();
+            
+            document.getElementById('boarding_image_base64').value = data.imageBase64;
+            document.getElementById('boardingScanArea').classList.add('has-data');
+        }
+
         // Initialize scanner when page loads
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(function() {
                 if (typeof ScannerClient !== 'undefined') {
                     initScanner();
+                    console.log('[DEBUG] Scanner client initialized');
+                } else {
+                    console.error('[DEBUG] ScannerClient class not found!');
                 }
             }, 500);
         });
+
+        // Debug panel toggle
+        let debugVisible = false;
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+                debugVisible = !debugVisible;
+                document.getElementById('debug-panel').style.display = debugVisible ? 'block' : 'none';
+            }
+        });
+
+        function updateDebugPanel() {
+            const panel = document.getElementById('debug-info');
+            if (panel && scannerClient) {
+                panel.innerHTML = `
+                    <strong>WebSocket:</strong> ${scannerClient.wsUrl}<br>
+                    <strong>Connected:</strong> ${scannerClient.isConnected ? '✅ Yes' : '❌ No'}<br>
+                    <strong>Scanner Ready:</strong> ${scannerClient.scannerReady ? '✅ Yes' : '❌ No'}<br>
+                    <strong>Scanner Name:</strong> ${scannerClient.scannerName || 'N/A'}<br>
+                    <strong>Demo Mode:</strong> ${scannerClient.demoMode ? 'Yes' : 'No'}<br>
+                    <strong>SDK Version:</strong> ${scannerClient.sdkVersion || 'N/A'}<br>
+                    <strong>Last Update:</strong> ${new Date().toLocaleTimeString()}
+                `;
+            }
+        }
+        setInterval(updateDebugPanel, 1000);
     </script>
+
+    <!-- Debug Panel (Press Ctrl+Shift+D to toggle) -->
+    <div id="debug-panel" style="display:none; position:fixed; bottom:10px; right:10px; background:#222; color:#0f0; padding:15px; border-radius:8px; font-family:monospace; font-size:12px; z-index:9999; max-width:350px;">
+        <div style="margin-bottom:8px; border-bottom:1px solid #444; padding-bottom:5px;">
+            <strong>🔧 Scanner Debug Panel</strong> <small>(Ctrl+Shift+D)</small>
+        </div>
+        <div id="debug-info">Loading...</div>
+        <div style="margin-top:10px; border-top:1px solid #444; padding-top:8px;">
+            <button onclick="scannerClient && scannerClient.getStatus()" style="margin-right:5px; padding:3px 8px;">Get Status</button>
+            <button onclick="scannerClient && scannerClient.ping()" style="margin-right:5px; padding:3px 8px;">Ping</button>
+            <button onclick="scannerClient && scannerClient.scan()" style="padding:3px 8px;">Test Scan</button>
+        </div>
+    </div>
 </body>
 </html>

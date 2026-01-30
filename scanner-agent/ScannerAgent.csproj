@@ -5,9 +5,23 @@
     <TargetFramework>net6.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <ApplicationIcon>scanner.ico</ApplicationIcon>
+    <!-- <ApplicationIcon>scanner.ico</ApplicationIcon> -->
     <AssemblyName>ScannerAgent</AssemblyName>
     <RootNamespace>ScannerAgent</RootNamespace>
+    <PlatformTarget>x64</PlatformTarget>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+  </PropertyGroup>
+
+  <!-- Exclude code-references folder from compilation -->
+  <ItemGroup>
+    <Compile Remove="code-references\**" />
+    <None Remove="code-references\**" />
+  </ItemGroup>
+
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,13 +29,16 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
-  <!-- SecureScan SDK Reference - Update path when SDK is available -->
-  <!--
+
+  <!-- Copy SDK DLLs to output directory -->
   <ItemGroup>
-    <Reference Include="SecureScanLib">
-      <HintPath>SDK\SecureScanLib.dll</HintPath>
-    </Reference>
+    <None Include="SDK\*.dll" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="SDK\*.ini" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
-  -->
+
+  <!-- Include demo passport image if exists -->
+  <ItemGroup>
+    <None Include="demo-passport.jpg" CopyToOutputDirectory="PreserveNewest" Condition="Exists('demo-passport.jpg')" />
+  </ItemGroup>
 
 </Project>

@@ -9,6 +9,10 @@ class ScannerClient {
         this.ws = null;
         this.isConnected = false;
         this.scannerReady = false;
+        this.scannerName = '';
+        this.demoMode = false;
+        this.sdkVersion = '';
+        this.documentPresent = false;
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
         this.reconnectDelay = 2000;
@@ -71,12 +75,22 @@ class ScannerClient {
     handleMessage(data) {
         try {
             const message = JSON.parse(data);
-            console.log('[Scanner] Received:', message.type);
+            console.log('[Scanner] Received:', message.type, message);
+            console.log('[Scanner] Full data:', data);
 
             switch (message.type) {
                 case 'connected':
                     this.scannerReady = message.scannerReady;
-                    this.onStatusChange({ connected: true, ready: this.scannerReady });
+                    this.scannerName = message.scannerName || '';
+                    this.demoMode = message.demoMode || false;
+                    this.sdkVersion = message.sdkVersion || '';
+                    this.onStatusChange({
+                        connected: true,
+                        ready: this.scannerReady,
+                        scannerName: this.scannerName,
+                        demoMode: this.demoMode,
+                        sdkVersion: this.sdkVersion
+                    });
                     break;
 
                 case 'scanning':
@@ -84,19 +98,29 @@ class ScannerClient {
                     break;
 
                 case 'scan_result':
+                    console.log('[Scanner] Scan result received:', message);
                     if (message.success) {
+                        console.log('[Scanner] Scan SUCCESS - data:', message.data);
                         this.onScanResult(message.data);
                     } else {
+                        console.log('[Scanner] Scan FAILED - error:', message.error);
                         this.onScanError(message.error);
                     }
                     break;
 
                 case 'status':
                     this.scannerReady = message.scannerReady;
+                    this.scannerName = message.scannerName || this.scannerName;
+                    this.demoMode = message.demoMode ?? this.demoMode;
+                    this.sdkVersion = message.sdkVersion || this.sdkVersion;
+                    this.documentPresent = message.documentPresent ?? false;
                     this.onStatusChange({
                         connected: true,
                         ready: this.scannerReady,
-                        scannerName: message.scannerName
+                        scannerName: this.scannerName,
+                        demoMode: this.demoMode,
+                        sdkVersion: this.sdkVersion,
+                        documentPresent: this.documentPresent
                     });
                     break;
 
@@ -116,9 +140,10 @@ class ScannerClient {
 
     send(data) {
         if (this.isConnected && this.ws) {
+            console.log('[Scanner] Sending:', data);
             this.ws.send(JSON.stringify(data));
         } else {
-            console.error('[Scanner] Not connected');
+            console.error('[Scanner] Not connected - cannot send:', data);
         }
     }
 
