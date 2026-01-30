@@ -1,0 +1,53 @@
+<script>
+    function confirmDelete(id) {
+        document.getElementById('deleteSuggestionForm').action = '/suggestions/' + id;
+        new bootstrap.Modal(document.getElementById('deleteSuggestionModal')).show();
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const selectAll = document.getElementById('selectAll');
+        const checkboxes = document.querySelectorAll('.item-checkbox');
+        const bulkActionsBar = document.getElementById('bulkActionsBar');
+        const selectedCount = document.getElementById('selectedCount');
+
+        if (selectAll) {
+            selectAll.addEventListener('change', function() {
+                checkboxes.forEach(cb => cb.checked = this.checked);
+                updateBulkActionsBar();
+            });
+        }
+
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', updateBulkActionsBar);
+        });
+
+        function updateBulkActionsBar() {
+            const checked = document.querySelectorAll('.item-checkbox:checked');
+            if (checked.length > 0) {
+                bulkActionsBar.classList.remove('d-none');
+                selectedCount.textContent = checked.length;
+            } else {
+                bulkActionsBar.classList.add('d-none');
+            }
+        }
+    });
+
+    function clearSelection() {
+        document.querySelectorAll('.item-checkbox').forEach(cb => cb.checked = false);
+        document.getElementById('selectAll').checked = false;
+        document.getElementById('bulkActionsBar').classList.add('d-none');
+    }
+
+    function bulkDelete() {
+        const checked = document.querySelectorAll('.item-checkbox:checked');
+        if (checked.length === 0) return;
+
+        const idsContainer = document.getElementById('bulkDeleteIds');
+        idsContainer.innerHTML = '';
+        checked.forEach(cb => {
+            idsContainer.innerHTML += `<input type="hidden" name="ids[]" value="${cb.value}">`;
+        });
+        document.getElementById('bulk_delete_count').textContent = checked.length;
+        new bootstrap.Modal(document.getElementById('bulkDeleteModal')).show();
+    }
+</script>

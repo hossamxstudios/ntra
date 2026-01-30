@@ -1,0 +1,4 @@
+# Place SecureScan SDK files here
+# Required files:
+# - SecureScanLib.dll
+# - Any other SDK dependencies
