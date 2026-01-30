@@ -15,6 +15,7 @@ namespace ScannerAgent
         {
             Console.WriteLine("===========================================");
             Console.WriteLine("  SecureScan Agent - NTRA Kiosk System");
+            Console.WriteLine("  Version 1.0.0");
             Console.WriteLine("===========================================");
             Console.WriteLine();
 
@@ -27,7 +28,22 @@ namespace ScannerAgent
                 return;
             }
 
-            Console.WriteLine("[OK] Scanner initialized successfully");
+            // Display scanner status
+            Console.WriteLine();
+            Console.WriteLine($"[OK] Scanner: {_scannerService.ScannerName}");
+            Console.WriteLine($"[OK] SDK Version: {_scannerService.GetSDKVersion()}");
+            if (_scannerService.IsDemoMode)
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("[WARNING] Running in DEMO MODE - Connect scanner for real scanning");
+                Console.ResetColor();
+            }
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("[OK] Real scanner connected and ready");
+                Console.ResetColor();
+            }
 
             // Start WebSocket server
             var server = new WebSocketServer("ws://0.0.0.0:9001");
@@ -39,12 +55,15 @@ namespace ScannerAgent
                     Console.WriteLine($"[CONNECTED] Client connected: {socket.ConnectionInfo.ClientIpAddress}");
                     _clients.Add(socket);
                     
-                    // Send welcome message
+                    // Send welcome message with scanner info
                     socket.Send(JsonConvert.SerializeObject(new
                     {
                         type = "connected",
                         message = "Scanner Agent connected",
-                        scannerReady = _scannerService.IsReady
+                        scannerReady = _scannerService.IsReady,
+                        scannerName = _scannerService.ScannerName,
+                        demoMode = _scannerService.IsDemoMode,
+                        sdkVersion = _scannerService.GetSDKVersion()
                     }));
                 };
 
@@ -70,7 +89,7 @@ namespace ScannerAgent
             Console.WriteLine("[SERVER] WebSocket server running on ws://localhost:9001");
             Console.WriteLine("[INFO] Waiting for connections from Laravel...");
             Console.WriteLine();
-            Console.WriteLine("Press 'Q' to quit, 'T' to test scan");
+            Console.WriteLine("Press 'Q' to quit, 'T' to test scan, 'S' for status");
             Console.WriteLine();
 
             // Keep running
@@ -80,6 +99,7 @@ namespace ScannerAgent
                 if (key.Key == ConsoleKey.Q)
                 {
                     Console.WriteLine("Shutting down...");
+                    _scannerService.Dispose();
                     break;
                 }
                 else if (key.Key == ConsoleKey.T)
@@ -87,7 +107,25 @@ namespace ScannerAgent
                     Console.WriteLine("Testing scan...");
                     TestScan();
                 }
+                else if (key.Key == ConsoleKey.S)
+                {
+                    ShowStatus();
+                }
             }
+        }
+
+        private static void ShowStatus()
+        {
+            Console.WriteLine();
+            Console.WriteLine("--- Scanner Status ---");
+            Console.WriteLine($"Scanner: {_scannerService.ScannerName}");
+            Console.WriteLine($"Ready: {_scannerService.IsReady}");
+            Console.WriteLine($"Demo Mode: {_scannerService.IsDemoMode}");
+            Console.WriteLine($"SDK Version: {_scannerService.GetSDKVersion()}");
+            Console.WriteLine($"Document Present: {_scannerService.IsDocumentPresent()}");
+            Console.WriteLine($"Connected Clients: {_clients.Count}");
+            Console.WriteLine("----------------------");
+            Console.WriteLine();
         }
 
         private static void HandleMessage(IWebSocketConnection socket, string message)
@@ -194,7 +232,10 @@ namespace ScannerAgent
             {
                 type = "status",
                 scannerReady = _scannerService.IsReady,
-                scannerName = _scannerService.ScannerName
+                scannerName = _scannerService.ScannerName,
+                demoMode = _scannerService.IsDemoMode,
+                sdkVersion = _scannerService.GetSDKVersion(),
+                documentPresent = _scannerService.IsDocumentPresent()
             }));
         }
 

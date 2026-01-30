@@ -98,6 +98,46 @@ class PageController extends Controller {
             ]
         );
 
+        // Save scanned images using Spatie Media Library
+        try {
+            // Passenger photo (data URL format: data:image/jpeg;base64,...)
+            if ($request->filled('passenger_photo')) {
+                $photoData = $request->passenger_photo;
+                if (str_starts_with($photoData, 'data:image')) {
+                    $passenger->clearMediaCollection('passenger_photo');
+                    $passenger->addMediaFromBase64(preg_replace('/^data:image\/\w+;base64,/', '', $photoData))
+                        ->usingFileName('passenger_photo_' . $passenger->id . '.jpg')
+                        ->toMediaCollection('passenger_photo');
+                }
+            }
+
+            // Passport scan (pure base64)
+            if ($request->filled('passport_image_base64')) {
+                $passenger->clearMediaCollection('passport_document');
+                $passenger->addMediaFromBase64($request->passport_image_base64)
+                    ->usingFileName('passport_' . $passenger->id . '.jpg')
+                    ->toMediaCollection('passport_document');
+            }
+
+            // Arrival stamp (pure base64)
+            if ($request->filled('arrival_image_base64')) {
+                $passenger->clearMediaCollection('arrival_stamp');
+                $passenger->addMediaFromBase64($request->arrival_image_base64)
+                    ->usingFileName('arrival_stamp_' . $passenger->id . '.jpg')
+                    ->toMediaCollection('arrival_stamp');
+            }
+
+            // Boarding card (pure base64)
+            if ($request->filled('boarding_image_base64')) {
+                $passenger->clearMediaCollection('boarding_card');
+                $passenger->addMediaFromBase64($request->boarding_image_base64)
+                    ->usingFileName('boarding_card_' . $passenger->id . '.jpg')
+                    ->toMediaCollection('boarding_card');
+            }
+        } catch (\Exception $e) {
+            \Log::error('Failed to save passenger media: ' . $e->getMessage());
+        }
+
         // Calculate tax
         $estimatedPrice = 25000;
         $taxAmount = $device->tax ?? ($estimatedPrice * 0.37);
