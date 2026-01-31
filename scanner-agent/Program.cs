@@ -89,27 +89,64 @@ namespace ScannerAgent
             Console.WriteLine("[SERVER] WebSocket server running on ws://localhost:9001");
             Console.WriteLine("[INFO] Waiting for connections from Laravel...");
             Console.WriteLine();
-            Console.WriteLine("Press 'Q' to quit, 'T' to test scan, 'S' for status");
+            
+            bool canReadInput = true;
+            try
+            {
+                // Test if console input is available
+                var _ = Console.KeyAvailable;
+                Console.WriteLine("Press 'Q' to quit, 'T' to test scan, 'S' for status");
+            }
+            catch
+            {
+                canReadInput = false;
+                Console.WriteLine("Running in background mode (console input disabled)");
+                Console.WriteLine("Close this window or use Task Manager to stop the agent");
+            }
             Console.WriteLine();
 
             // Keep running
             while (true)
             {
-                var key = Console.ReadKey(true);
-                if (key.Key == ConsoleKey.Q)
+                if (canReadInput)
                 {
-                    Console.WriteLine("Shutting down...");
-                    _scannerService.Dispose();
-                    break;
+                    try
+                    {
+                        if (Console.KeyAvailable)
+                        {
+                            var key = Console.ReadKey(true);
+                            if (key.Key == ConsoleKey.Q)
+                            {
+                                Console.WriteLine("Shutting down...");
+                                _scannerService.Dispose();
+                                break;
+                            }
+                            else if (key.Key == ConsoleKey.T)
+                            {
+                                Console.WriteLine("Testing scan...");
+                                TestScan();
+                            }
+                            else if (key.Key == ConsoleKey.S)
+                            {
+                                ShowStatus();
+                            }
+                        }
+                        else
+                        {
+                            System.Threading.Thread.Sleep(100);
+                        }
+                    }
+                    catch
+                    {
+                        // Console input no longer available
+                        canReadInput = false;
+                        Console.WriteLine("Console input lost, continuing in background mode...");
+                    }
                 }
-                else if (key.Key == ConsoleKey.T)
+                else
                 {
-                    Console.WriteLine("Testing scan...");
-                    TestScan();
-                }
-                else if (key.Key == ConsoleKey.S)
-                {
-                    ShowStatus();
+                    // Background mode - just keep running
+                    System.Threading.Thread.Sleep(1000);
                 }
             }
         }

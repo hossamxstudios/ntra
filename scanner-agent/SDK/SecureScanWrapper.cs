@@ -107,13 +107,37 @@ namespace ScannerAgent.SDK
                     
                     if (!string.IsNullOrEmpty(deviceList))
                     {
-                        // Parse device list (format: device1|&|device2|&|...)
-                        var devices = deviceList.Split(new[] { "|&|" }, StringSplitOptions.RemoveEmptyEntries);
-                        if (devices.Length > 0)
+                        // Try to parse as JSON array first (newer SDK versions)
+                        if (deviceList.TrimStart().StartsWith("["))
                         {
-                            _deviceName = devices[0].Trim();
-                            _scannerName = _deviceName;
-                            Console.WriteLine($"[SDK] Selected device: {_deviceName}");
+                            try
+                            {
+                                var jsonArray = JArray.Parse(deviceList);
+                                if (jsonArray.Count > 0)
+                                {
+                                    _deviceName = jsonArray[0].ToString();
+                                    _scannerName = _deviceName;
+                                    Console.WriteLine($"[SDK] Selected device: {_deviceName}");
+                                }
+                            }
+                            catch
+                            {
+                                // Fallback to string parsing
+                                _deviceName = deviceList.Trim('[', ']', '"', ' ');
+                                _scannerName = _deviceName;
+                                Console.WriteLine($"[SDK] Selected device: {_deviceName}");
+                            }
+                        }
+                        else
+                        {
+                            // Parse device list (format: device1|&|device2|&|...)
+                            var devices = deviceList.Split(new[] { "|&|" }, StringSplitOptions.RemoveEmptyEntries);
+                            if (devices.Length > 0)
+                            {
+                                _deviceName = devices[0].Trim();
+                                _scannerName = _deviceName;
+                                Console.WriteLine($"[SDK] Selected device: {_deviceName}");
+                            }
                         }
                     }
                 }
@@ -129,17 +153,31 @@ namespace ScannerAgent.SDK
                     return false;
                 }
 
+                // CRITICAL: Wait for background device initialization to complete
+                // GetDevicesList() triggers async getDeviceCap() calls that open the device
+                // If we call SetProperty() immediately, device isn't ready yet → error code 3
+                Console.WriteLine("[SDK] Waiting 2 seconds for background device initialization...");
+                System.Threading.Thread.Sleep(2000);
+
                 // Set up event callback
                 _eventCallback = OnScanEvent;
 
-                // Configure scanner properties
-                string command = $"{{\"device-name\":\"{_deviceName}\",\"source\":\"Camera\",\"recognize-type\":\"passport\"}}";
+                // Configure scanner properties with minimal working command
+                // Note: Complex parameters may not be supported by all SDK versions
+                string command = $"{{\"device-name\":\"{_deviceName}\",\"source\":\"Camera\"}}";
+                Console.WriteLine($"[SDK] SetProperty command: {command}");
                 result = PlustekSDK.LibWFX_SetProperty(command, _eventCallback, IntPtr.Zero);
 
-                if (result != ENUM_LIBWFX_ERRCODE.LIBWFX_ERRCODE_SUCCESS)
+                if (result != ENUM_LIBWFX_ERRCODE.LIBWFX_ERRCODE_SUCCESS && 
+                    result != ENUM_LIBWFX_ERRCODE.LIBWFX_ERRCODE_COMMAND_KEY_MISMATCH)
                 {
-                    Console.WriteLine($"[SDK] LibWFX_SetProperty failed: {result}");
-                    LogError(result);
+                    Console.WriteLine($"[SDK] LibWFX_SetProperty failed with error code: {result}");
+                    // Don't call LogError - it can cause AccessViolationException
+                    return false;
+                }
+                else if (result == ENUM_LIBWFX_ERRCODE.LIBWFX_ERRCODE_COMMAND_KEY_MISMATCH)
+                {
+                    Console.WriteLine($"[SDK] SetProperty returned COMMAND_KEY_MISMATCH (may be non-fatal)");
                 }
 
                 _isInitialized = true;
@@ -168,15 +206,32 @@ namespace ScannerAgent.SDK
         {
             try
             {
-                IntPtr errorMsgPtr;
-                PlustekSDK.LibWFX_GetLastErrorCode(errorCode, out errorMsgPtr);
-                if (errorMsgPtr != IntPtr.Zero)
+                IntPtr errorMsgPtr = IntPtr.Zero;
+                var result = PlustekSDK.LibWFX_GetLastErrorCode(errorCode, out errorMsgPtr);
+                
+                // Check if the call succeeded and pointer is valid before dereferencing
+                if (result == ENUM_LIBWFX_ERRCODE.LIBWFX_ERRCODE_SUCCESS && 
+                    errorMsgPtr != IntPtr.Zero)
                 {
-                    string errorMsg = Marshal.PtrToStringUni(errorMsgPtr) ?? "Unknown error";
-                    Console.WriteLine($"[SDK] Error details: {errorMsg}");
+                    try
+                    {
+                        string errorMsg = Marshal.PtrToStringUni(errorMsgPtr) ?? "Unknown error";
+                        Console.WriteLine($"[SDK] Error details: {errorMsg}");
+                    }
+                    catch (AccessViolationException)
+                    {
+                        Console.WriteLine($"[SDK] Error code: {errorCode} (details unavailable)");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"[SDK] Error code: {errorCode}");
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[SDK] Failed to get error details: {ex.Message}");
+            }
         }
 
         public ScanResult ScanPassport()
