@@ -1,17 +1,30 @@
 {
-API: "scan",
-return: {
-result: true,
-data: [
-            {
-fileName: "IMG_26500578_00003.jpg",
-base64: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEBLAEsAAD/"و  
-ocrText: {
-                    14 items
-                },
-md5: ""
-            }
-        ],
-message: "OK"
-    }
+  "API": "scan",
+  "return": {
+    "result": true,
+    "data": [
+      {
+        "fileName": "IMG_26500578_00003.jpg",
+        "base64": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEBLAEsAAD/",
+        "ocrText": {
+          "Type": "P",
+          "Angle": "0",
+          "MRTDs": "P<EGYSELIM<<SHERIF<MOUSSA<SAYED<<<<<<<<<<<<<A312062026EGY8410010M2908018<<<<<<<<<<<<<<04",
+          "DocumentNo": "A31206202",
+          "Familyname": "SELIM",
+          "Givenname": "SHERIF MOUSSA SAYED",
+          "Nationality": "EGY",
+          "Birthday": "841001",
+          "PersonalNo": "",
+          "Sex": "M",
+          "Dateofexpiry": "290801",
+          "IssueState": "EGY",
+          "NativeName": "",
+          "Checksum": true
+        },
+        "md5": ""
+      }
+    ],
+    "message": "OK"
+  }
 }
