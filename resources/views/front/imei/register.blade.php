@@ -58,7 +58,8 @@
         .recap-item { font-size: 0.95rem; padding: 0.4rem 0; }
         .recap-preview { height: 100px; display: flex; align-items: center; justify-content: center; }
     </style>
-    <script src="{{ asset('js/scanner-client.js') }}"></script>
+    <script src="{{ asset('js/webfxscan-sdk.js') }}"></script>
+    <script src="{{ asset('js/passport-scanner.js') }}"></script>
 </head>
 <body>
     <div class="kiosk-page">
@@ -558,20 +559,22 @@
         });
 
         // ========================================
-        // SecureScan X50 Integration
+        // WebFXScan Passport Scanner Integration
         // ========================================
         let scannerClient = null;
 
         function initScanner() {
-            scannerClient = new ScannerClient({
-                wsUrl: 'ws://localhost:9001',
+            scannerClient = new PassportScanner({
                 onConnected: () => {
+                    console.log('[Scanner] Connected to WebFXScan');
                     updateScannerUI(true, true);
                 },
                 onDisconnected: () => {
+                    console.log('[Scanner] Disconnected from WebFXScan');
                     updateScannerUI(false, false);
                 },
                 onStatusChange: (status) => {
+                    console.log('[Scanner] Status change:', status);
                     updateScannerUI(status.connected, status.ready);
                 },
                 onScanning: (message) => {
@@ -596,7 +599,12 @@
                     lucide.createIcons();
                 }
             });
-            scannerClient.connect();
+            
+            // Connect to WebFXScan server
+            scannerClient.connect().catch(error => {
+                console.error('[Scanner] Connection failed:', error);
+                alert('فشل الاتصال بالماسح الضوئي. تأكد من تشغيل Plustek WebFXScan server على المنفذ 17778.');
+            });
         }
 
         function updateScannerUI(connected, ready) {
@@ -624,16 +632,15 @@
 
         function handlePassportScanResult(data) {
             console.log('[DEBUG] handlePassportScanResult called with:', data);
-            console.log('[DEBUG] firstName:', data.firstName);
-            console.log('[DEBUG] lastName:', data.lastName);
-            console.log('[DEBUG] passportNumber:', data.passportNumber);
-            console.log('[DEBUG] nationality:', data.nationality);
-            console.log('[DEBUG] imageBase64 length:', data.imageBase64 ? data.imageBase64.length : 0);
+            
+            const passportData = data.passportData || {};
+            console.log('[DEBUG] passportData:', passportData);
+            console.log('[DEBUG] image length:', data.image ? data.image.length : 0);
 
             // Show scanned image
-            if (data.imageBase64) {
+            if (data.image) {
                 document.getElementById('scan-preview').innerHTML = `
-                    <img src="data:image/jpeg;base64,${data.imageBase64}" class="img-fluid rounded" style="max-height:120px;">
+                    <img src="data:image/jpeg;base64,${data.image}" class="img-fluid rounded" style="max-height:120px;">
                     <p class="mb-0 mt-2 text-success small"><i data-lucide="check-circle" style="width:14px;height:14px;"></i> تم المسح بنجاح</p>
                 `;
             } else {
@@ -647,13 +654,13 @@
             lucide.createIcons();
 
             // Store base64 image
-            document.getElementById('passport_image_base64').value = data.imageBase64 || '';
+            document.getElementById('passport_image_base64').value = data.image || '';
 
-            // Fill form fields
-            document.getElementById('firstName').value = data.firstName || '';
-            document.getElementById('lastName').value = data.lastName || '';
-            document.getElementById('passportNo').value = data.passportNumber || '';
-            document.getElementById('nationality').value = data.nationality || '';
+            // Fill form fields from passportData object
+            document.getElementById('firstName').value = passportData.firstName || '';
+            document.getElementById('lastName').value = passportData.lastName || '';
+            document.getElementById('passportNo').value = passportData.passportNumber || '';
+            document.getElementById('nationality').value = passportData.nationality || '';
             
             console.log('[DEBUG] Form fields filled:');
             console.log('[DEBUG] - firstName field:', document.getElementById('firstName').value);
@@ -699,13 +706,17 @@
         }
 
         function handleArrivalScanResult(data) {
+            console.log('[DEBUG] Arrival scan result:', data);
+            
+            const imageBase64 = data.image || data.imageBase64 || '';
+            
             document.getElementById('arrival-preview').innerHTML = `
-                <img src="data:image/jpeg;base64,${data.imageBase64}" class="img-fluid rounded" style="max-height:120px;">
+                <img src="data:image/jpeg;base64,${imageBase64}" class="img-fluid rounded" style="max-height:120px;">
                 <p class="mb-0 mt-2 text-success small"><i data-lucide="check-circle" style="width:14px;height:14px;"></i> تم المسح بنجاح</p>
             `;
             lucide.createIcons();
             
-            document.getElementById('arrival_image_base64').value = data.imageBase64;
+            document.getElementById('arrival_image_base64').value = imageBase64;
             document.getElementById('arrivalScanArea').classList.add('has-data');
         }
 
@@ -735,24 +746,28 @@
         }
 
         function handleBoardingScanResult(data) {
+            console.log('[DEBUG] Boarding card scan result:', data);
+            
+            const imageBase64 = data.image || data.imageBase64 || '';
+            
             document.getElementById('boarding-preview').innerHTML = `
-                <img src="data:image/jpeg;base64,${data.imageBase64}" class="img-fluid rounded" style="max-height:120px;">
+                <img src="data:image/jpeg;base64,${imageBase64}" class="img-fluid rounded" style="max-height:120px;">
                 <p class="mb-0 mt-2 text-success small"><i data-lucide="check-circle" style="width:14px;height:14px;"></i> تم المسح بنجاح</p>
             `;
             lucide.createIcons();
             
-            document.getElementById('boarding_image_base64').value = data.imageBase64;
+            document.getElementById('boarding_image_base64').value = imageBase64;
             document.getElementById('boardingScanArea').classList.add('has-data');
         }
 
         // Initialize scanner when page loads
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(function() {
-                if (typeof ScannerClient !== 'undefined') {
+                if (typeof PassportScanner !== 'undefined') {
                     initScanner();
-                    console.log('[DEBUG] Scanner client initialized');
+                    console.log('[DEBUG] PassportScanner initialized');
                 } else {
-                    console.error('[DEBUG] ScannerClient class not found!');
+                    console.error('[DEBUG] PassportScanner class not found! Check if passport-scanner.js is loaded.');
                 }
             }, 500);
         });
