@@ -43,17 +43,7 @@
 
                                 <div class="mb-4">
                                     <label for="imei" class="mb-2 form-label fs-5 fw-semibold">رقم المعدة (IMEI) <span class="text-danger">*</span></label>
-                                    <input type="text"
-                                        class="py-3 form-control form-control-lg text-center fs-4 @error('imei') is-invalid @enderror"
-                                        id="imei"
-                                        name="imei"
-                                        placeholder="أدخل 15 رقم"
-                                        maxlength="15"
-                                        inputmode="numeric"
-                                        style="letter-spacing: 3px;"
-                                        value="{{ old('imei') }}"
-                                        required
-                                        autofocus>
+                                    <input type="text" class="py-3 form-control form-control-lg text-center fs-4 @error('imei') is-invalid @enderror" id="imei" name="imei" placeholder="أدخل 15 رقم" maxlength="15" inputmode="numeric" style="letter-spacing: 3px;" value="{{ old('imei') }}" required autofocus>
                                     @error('imei')
                                         <div class="invalid-feedback fs-6">{{ $message }}</div>
                                     @enderror

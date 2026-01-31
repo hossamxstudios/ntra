@@ -69,14 +69,14 @@ class PageController extends Controller {
 
     public function imeiRegisterSubmit(Request $request, MobileDevice $device) {
         $request->validate([
-            'first_name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'passport_no' => 'required|string|max:50',
+            'given_name' => 'required|string|max:255',
+            'family_name' => 'required|string|max:255',
+            'document_no' => 'required|string|max:50',
             'nationality' => 'required|string|max:100',
         ], [
-            'first_name.required' => 'يرجى إدخال الاسم الأول',
-            'last_name.required' => 'يرجى إدخال اسم العائلة',
-            'passport_no.required' => 'يرجى إدخال رقم جواز السفر',
+            'given_name.required' => 'يرجى إدخال الاسم الأول',
+            'family_name.required' => 'يرجى إدخال اسم العائلة',
+            'document_no.required' => 'يرجى إدخال رقم جواز السفر',
             'nationality.required' => 'يرجى إدخال الجنسية',
         ]);
 
@@ -88,13 +88,51 @@ class PageController extends Controller {
         );
         $machine = $result['machine'];
 
-        // Create or update passenger
+        // Parse birthday date (format: DD/MM/YYYY)
+        $birthdate = null;
+        if ($request->filled('birthday')) {
+            try {
+                $birthdate = \Carbon\Carbon::createFromFormat('d/m/Y', $request->birthday)->format('Y-m-d');
+            } catch (\Exception $e) {
+                $birthdate = null;
+            }
+        }
+
+        // Parse expiry date (format: DD/MM/YYYY)
+        $validUntil = null;
+        if ($request->filled('expiry_date')) {
+            try {
+                $validUntil = \Carbon\Carbon::createFromFormat('d/m/Y', $request->expiry_date)->format('Y-m-d');
+            } catch (\Exception $e) {
+                $validUntil = null;
+            }
+        }
+
+        // Map gender from Arabic to enum
+        $gender = null;
+        if ($request->filled('sex')) {
+            $sexValue = $request->sex;
+            if ($sexValue === 'ذكر' || $sexValue === 'M') {
+                $gender = 'male';
+            } elseif ($sexValue === 'أنثى' || $sexValue === 'F') {
+                $gender = 'female';
+            }
+        }
+
+        // Create or update passenger (mapping form fields to DB columns)
         $passenger = Passenger::updateOrCreate(
-            ['passport_no' => $request->passport_no],
+            ['passport_no' => $request->document_no],
             [
-                'first_name' => $request->first_name,
-                'last_name' => $request->last_name,
+                'first_name' => $request->given_name,        // given_name → first_name
+                'last_name' => $request->family_name,        // family_name → last_name
                 'nationality' => $request->nationality,
+                'issue_state' => $request->issue_state,
+                'document_number' => $request->document_no,  // document_no → document_number
+                'document_type' => $request->document_type,
+                'birthdate' => $birthdate,                   // birthday → birthdate
+                'gender' => $gender,                         // sex → gender
+                'valid_until' => $validUntil,                // expiry_date → valid_until
+                'mrz1' => $request->passport_mrz,            // passport_mrz → mrz1
             ]
         );
 
