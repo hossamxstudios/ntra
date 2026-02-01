@@ -247,28 +247,37 @@ class PassportScanner {
             gender: ''
         };
         
+        console.log('[Scanner] _parseMRZData received ocrText:', ocrText);
+        console.log('[Scanner] ocrText type:', typeof ocrText);
+        console.log('[Scanner] ocrText keys:', Object.keys(ocrText || {}));
+        
         if (!ocrText || typeof ocrText !== 'object') {
+            console.warn('[Scanner] Invalid ocrText, returning empty data');
             return data;
         }
         
         try {
-            // WebFXScan returns structured JSON for passport recognition
-            if (ocrText.recognizeType === 'passport') {
-                const fields = ocrText.field || {};
-                
-                // Extract passport fields
-                data.passportNumber = this._extractField(fields, ['passportno', 'documentno', 'passport_number']);
-                data.firstName = this._extractField(fields, ['firstname', 'given_name', 'givenname']);
-                data.lastName = this._extractField(fields, ['lastname', 'surname', 'family_name']);
-                data.nationality = this._extractField(fields, ['nationality', 'countrycode']);
-                data.dateOfBirth = this._extractField(fields, ['birthday', 'dateofbirth', 'birthdate']);
-                data.expiryDate = this._extractField(fields, ['expirydate', 'expiry_date', 'expiration']);
-                data.gender = this._extractField(fields, ['sex', 'gender']);
-                
-                // Format dates from YYMMDD to readable format
-                data.dateOfBirth = this._formatMRZDate(data.dateOfBirth);
-                data.expiryDate = this._formatMRZDate(data.expiryDate);
-            }
+            // WebFXScan returns fields directly in ocrText object
+            // Extract passport fields using exact WebFXScan field names
+            data.passportNumber = this._extractField(ocrText, ['documentno', 'passportno', 'passport_number']);
+            data.firstName = this._extractField(ocrText, ['givenname', 'firstname', 'given_name']);
+            data.lastName = this._extractField(ocrText, ['familyname', 'lastname', 'surname']);
+            data.nationality = this._extractField(ocrText, ['nationality', 'issuestate', 'countrycode']);
+            data.dateOfBirth = this._extractField(ocrText, ['birthday', 'dateofbirth', 'birthdate']);
+            data.expiryDate = this._extractField(ocrText, ['dateofexpiry', 'expirydate', 'expiry_date']);
+            data.gender = this._extractField(ocrText, ['sex', 'gender']);
+            
+            console.log('[Scanner] After field extraction:', {
+                passportNumber: data.passportNumber,
+                firstName: data.firstName,
+                lastName: data.lastName
+            });
+            
+            // Format dates from YYMMDD to readable format
+            data.dateOfBirth = this._formatMRZDate(data.dateOfBirth);
+            data.expiryDate = this._formatMRZDate(data.expiryDate);
+            
+            console.log('[Scanner] Parsed passport data:', data);
         } catch (error) {
             console.warn('[Scanner] MRZ parsing error:', error);
         }
