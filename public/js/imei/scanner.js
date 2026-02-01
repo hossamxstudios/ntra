@@ -125,10 +125,11 @@ function handlePassportScanResult(data) {
         imageBase64 = scanData.base64 || '';
         ocrText = scanData.ocrText || {};
     }
-    // Direct format fallback
+    // Direct format fallback (PassportScanner format)
     else {
         imageBase64 = data.base64 || data.image || '';
-        ocrText = data.ocrText || data.passportData || {};
+        // Use rawOcrText which has WebFXScan field names (Givenname, Familyname, etc.)
+        ocrText = data.ocrText || data.rawOcrText || {};
     }
 
     // Remove data URI prefix if present for storage, keep for display
